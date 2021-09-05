@@ -45,14 +45,21 @@ module OpenCensus
         end
 
         def emit(span_datas)
-          responses = client.call(:Export,
+          responses = client.call(:Export, generate_span_requests(span_datas)) # This is where the span requests go
+          puts("Responses: #{responses}")
+        rescue GRPC::Error => e
+          puts("Error: #{e}")
         end
 
         def export(span_datas)
+          # TODO:?
+          emit(span_datas)
         end
 
         def generate_span_requests(span_datas)
+          span_protos = span_datas.map { |span_data| translate_to_trace_proto(span_data) }
 
+          ::OpenCensus::Proto::Agent::Trace::V1::ExportTraceServiceRequest.new(node: node, spans: span_protos)
         end
 
         private
@@ -92,27 +99,59 @@ module OpenCensus
           )
 
           # Set span attributes
-          if span_data.attributes
-            span_data.attributes.each do |key, value|
-              case value.class
-              when TrueClass || FalseClass
-                span_proto.attributes.attribute_map[key].bool_value = value
-              when Integer
-                span_proto.attributes.attribute_map[key].int_value = value
-              when String
-                span_proto.attributes.attribute_map[key].string_value = value
-              when Float
-                span_proto.attributes.attribute_map[key].double_value = value
-              else
-                span_proto.attributes.attribute_map[key].string_value = value
-              end
-            end
+          span_data.attributes&.each do |key, value|
+            add_pb_attributes(span_proto.attributes, key, value)
           end
 
           # Set span annotations
-          if span_data.annotations
-            span_data.annotations.each do |annotation|
+          span_data.annotations&.each do |annotation|
+            next if annotation.attributes.nil?
+
+            annotation.attributes.each do |key, val|
+              ad_pb_attributes(span_proto.attributes, key, val)
             end
+          end
+
+          # Set message events
+          span_data.message_events&.each do |event|
+            # TODO: I don't know if this works
+            proto_event = span_proto.time_events.time_event.new()
+            proto_event.time = Google::Protobuf::Timestamp.new.from_time(Time.parse(event.timestamp))
+            proto_event.type = event.type
+            proto_event.id = event.id
+            proto_event.uncompressed_size = event.uncompressed_size_bytes
+            proto_event.compressed_size = event.compressed_size_bytes
+          end
+
+          # Span links
+          span_data.links&.each do |link|
+            proto_link = span_proto.link.new(trace_id: hex_to_bytes(link.trace_id),
+                                             span_id: hex_to_bytes(link.span_id),
+                                             type: link.type)
+            link.attributes&.attributes&.each do |key, val|
+              add_pb_attributes(span_proto.attributes, key, val)
+            end
+          end
+
+          span_data.context.tracestate&.each do |key, val|
+            span_proto.tracestate.entries.new(key: key, val: val)
+          end
+
+          span_proto
+        end
+
+        def add_pb_attributes(pb_attributes, key, value)
+          case value.class
+          when TrueClass || FalseClass
+            pb_attributes.attribute_map[key].bool_value = value
+          when Integer
+            pb_attributes.attribute_map[key].int_value = value
+          when String
+            pb_attributes.attribute_map[key].string_value = value
+          when Float
+            pb_attributes.attribute_map[key].double_value = value
+          else
+            pb_attributes.attribute_map[key].string_value = value
           end
         end
 
