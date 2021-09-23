@@ -1,0 +1,25 @@
+# https://github.com/opencensus-beam/opencensus_service
+version: '3'
+
+services:
+  oc-agent:
+    image: omnition/opencensus-agent:0.1.11
+    command: ["--config=/conf/oc-agent-config.yml"]
+    ports:
+      - 55678:55678
+      - 55679:55679
+    volumes:
+      - ./oc-agent-config.yml:/conf/oc-agent-config.yml
+    depends_on:
+      - oc-collector
+  oc-collector:
+    image: omnition/opencensus-collector:0.1.11
+    command: ["--config=/conf/oc-collector-config.yml"]
+    volumes:
+      - ./oc-collector-config.yml:/conf/oc-collector-config.yml
+    depends_on:
+      - zipkin
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - 9411:9411

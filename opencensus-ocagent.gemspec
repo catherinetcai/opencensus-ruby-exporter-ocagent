@@ -38,7 +38,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "gruf", "~> 2.9.1"
   spec.add_dependency "opencensus", "~> 0.4.0"
-  spec.add_dependency "ruby-protobuf", "~> 3.10.4"
+  spec.add_dependency "protobuf", "~> 3.10.4"
 
   spec.add_development_dependency "bundler", ">= 1.17", "< 3.0"
   spec.add_development_dependency "faraday", "~> 1.7"

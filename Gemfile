@@ -6,4 +6,5 @@ git 'https://github.com/catherinetcai/opencensus-proto.git', branch: 'ruby-gemsp
   gem 'opencensus-proto'
 end
 
+gem 'pry'
 gemspec

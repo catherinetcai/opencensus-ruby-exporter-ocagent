@@ -16,9 +16,9 @@
 
 require 'google/protobuf/well_known_types'
 require 'gruf'
-require 'opencensus-proto/proto/agent/trace/v1/common_pb'
-require 'opencensus-proto/proto/agent/trace/v1/trace_service_pb'
-require 'opencensus-proto/proto/agent/trace/v1/trace_service_services_pb'
+require 'opencensus/proto/agent/common/v1/common_pb'
+require 'opencensus/proto/agent/trace/v1/trace_service_pb'
+require 'opencensus/proto/agent/trace/v1/trace_service_services_pb'
 
 module OpenCensus
   ## OpenCensus Trace collects distributed traces
@@ -29,6 +29,7 @@ module OpenCensus
       DEFAULT_ENDPOINT = 'localhost:55678'
       # OCAgent exporter version
       EXPORTER_VERSION = '0.0.1'
+      CORE_LIBRARY_VERSION = '0.11.1'
 
       ## OpenCensus Agent exporter for Trace
       class OCAgent
@@ -38,10 +39,10 @@ module OpenCensus
           @endpoint = endpoint || DEFAULT_ENDPOINT
           @client = client || ::Gruf::Client.new(
             service: ::OpenCensus::Proto::Agent::Trace::V1::TraceService,
-            options: { hostname: endpoint },
+            options: { hostname: @endpoint },
           )
           @service_name = service_name
-          @node = get_node(service_name: service_name, host_name: host_name)
+          @node = get_node(service_name: @service_name, host_name: host_name)
         end
 
         def emit(span_datas)
@@ -68,12 +69,12 @@ module OpenCensus
             identifier: OpenCensus::Proto::Agent::Common::V1::ProcessIdentifier.new(
               host_name: host_name || Socket.gethostname,
               pid: Process.pid,
-              start_timestamp: Google::Protobuf::Timestamp.new.from_time(Time.new.utc),
+              start_timestamp: Google::Protobuf::Timestamp.new.from_time(Time.current),
             ),
             library_info: OpenCensus::Proto::Agent::Common::V1::LibraryInfo.new(
               language: OpenCensus::Proto::Agent::Common::V1::LibraryInfo::RUBY,
               exporter_version: EXPORTER_VERSION,
-              core_library_version: #TODO,
+              core_library_version: CORE_LIBRARY_VERSION,
             ),
             service_info: OpenCensus::Proto::Agent::Common::V1::ServiceInfo.new(name: service_name),
           )
