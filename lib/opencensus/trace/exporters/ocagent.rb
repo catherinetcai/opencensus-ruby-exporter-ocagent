@@ -66,7 +66,7 @@ module OpenCensus
         end
 
         def generate_span_requests(spans)
-          span_protos = span_datas.map { |span_data| Converter.new(spans) }
+          span_protos = spans.map { |span| Converter.new.convert_span(span) }
 
           ::OpenCensus::Proto::Agent::Trace::V1::ExportTraceServiceRequest.new(node: node, spans: span_protos)
         end

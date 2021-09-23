@@ -1,8 +1,8 @@
 require 'google/protobuf/well_known_types'
 require 'gruf'
-require 'opencensus-proto/proto/agent/trace/v1/common_pb'
-require 'opencensus-proto/proto/agent/trace/v1/trace_service_pb'
-require 'opencensus-proto/proto/agent/trace/v1/trace_service_services_pb'
+require 'opencensus/proto/agent/common/v1/common_pb'
+require 'opencensus/proto/agent/trace/v1/trace_service_pb'
+require 'opencensus/proto/agent/trace/v1/trace_service_services_pb'
 
 module OpenCensus
   module Trace
@@ -20,15 +20,15 @@ module OpenCensus
             return if span_data.nil?
 
             TraceProtos::V1::Span.new(
-              name: truncatable_string(span.name),
-              kind: span_data.span_kind,
-              trace_id: hex_to_bytes(span_data.context.trace_id),
-              span_id: hex_to_bytes(span_data.context.span_id),
-              parent_span_id: span_data.context.parent_span_id ? hex_to_bytes(span_data.context.parent_span_id) : "",
+              name: span_data.name,
+              kind: span_data.kind,
+              trace_id: span_data.trace_id,
+              span_id: span_data.span_id,
+              parent_span_id: span_data.parent_span_id,
               start_time: pb_timestamp(span_data.start_time),
               end_time: pb_timestamp(span_data.end_time),
-              status: pb_status(span_data.status),
-              child_span_count: Google::Protobuf::UInt32Value.new(value: span_data.child_span_count) if span_data.child_span_count,
+              status: span_data.status,
+              child_span_count: optional_uint32(span_data.child_span_count),
               attributes: convert_attributes(span_data.attributes, span_data.dropped_attributes_count),
               stack_trace: convert_stack_trace(span_data.stack_trace,
                                                span_data.dropped_frames_count,
@@ -37,8 +37,18 @@ module OpenCensus
                                                span_data.dropped_annotations_count,
                                                span_data.dropped_message_events_count),
               links: convert_links(span_data.links, span_data.dropped_links_count),
-              same_process_as_parent_span: Google::Protobuf::BoolValue.new(value: span_data.same_process_as_parent_span) if span_data.same_process_as_parent_span,
+              same_process_as_parent_span: optional_bool(span_data.same_process_as_parent_span),
             )
+          end
+
+          def optional_uint32(val)
+            return if val.nil?
+            Google::Protobuf::Uint32Value.new(value: val)
+          end
+
+          def optional_bool(val)
+            return if val.nil?
+            Google::Protobuf::BoolValue.new(value: val)
           end
 
           def truncatable_string(str, truncated_byte_count = 0)
@@ -59,13 +69,8 @@ module OpenCensus
           end
 
           def convert_attributes(attributes, dropped_attributes_count)
-            attribute_map = {}
-
-            attributes.each do |key, val|
-              attribute_map[key] = convert_attribute_value(val)
-            end
             TraceProtos::V1::Span::Attributes.new(
-              attribute_map: attribute_map,
+              attribute_map: attributes,
               dropped_attributes_count: dropped_attributes_count
             )
           end
@@ -79,7 +84,6 @@ module OpenCensus
             when Integer
               TraceProtos::V1::AttributeValue.new(int_value: value)
             else
-              puts("Can't handle value type: #{value}")
             end
           end
 
