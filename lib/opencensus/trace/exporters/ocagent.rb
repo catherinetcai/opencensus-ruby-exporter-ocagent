@@ -16,6 +16,7 @@
 
 require 'google/protobuf/well_known_types'
 require 'gruf'
+require 'opencensus/trace/exporters/ocagent/converter'
 require 'opencensus/proto/agent/common/v1/common_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_services_pb'
@@ -48,7 +49,7 @@ module OpenCensus
         def emit(span_datas)
           responses = client.call(:Export, generate_span_requests(span_datas)) # This is where the span requests go
           puts("Responses: #{responses}")
-        rescue GRPC::Error => e
+        rescue ::Gruf::Client::Error => e
           puts("Error: #{e}")
         end
 
@@ -65,14 +66,16 @@ module OpenCensus
         private
 
         def get_node(service_name:, host_name: nil)
+          time = Time.current
+
           OpenCensus::Proto::Agent::Common::V1::Node.new(
             identifier: OpenCensus::Proto::Agent::Common::V1::ProcessIdentifier.new(
               host_name: host_name || Socket.gethostname,
               pid: Process.pid,
-              start_timestamp: Google::Protobuf::Timestamp.new.from_time(Time.current),
+              start_timestamp: Google::Protobuf::Timestamp.new(seconds: time.to_i, nanos: time.nsec),
             ),
             library_info: OpenCensus::Proto::Agent::Common::V1::LibraryInfo.new(
-              language: OpenCensus::Proto::Agent::Common::V1::LibraryInfo::RUBY,
+              language: OpenCensus::Proto::Agent::Common::V1::LibraryInfo::Language::RUBY,
               exporter_version: EXPORTER_VERSION,
               core_library_version: CORE_LIBRARY_VERSION,
             ),
