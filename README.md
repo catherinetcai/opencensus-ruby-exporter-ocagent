@@ -1,6 +1,10 @@
 # Ruby OpenCensus Agent Exporter
-
 This library exports OpenCensus data to the OpenCensus Agent.
+
+## This Fork
+This is based off of the [Python OC-Agent Exporter](https://github.com/census-instrumentation/opencensus-python/blob/master/contrib/opencensus-ext-ocagent/README.rst) and the [OpenCensus Ruby Exporter Stackdriver](https://github.com/census-ecosystem/opencensus-ruby-exporter-stackdriver).
+
+This is devved on Ruby 3.0.
 
 ## About the library
 

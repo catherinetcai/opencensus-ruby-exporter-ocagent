@@ -36,17 +36,19 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.required_ruby_version = ">= 2.3.0"
 
+  spec.add_dependency "gruf", "~> 2.9.1"
   spec.add_dependency "opencensus", "~> 0.4.0"
+  spec.add_dependency "protobuf", "~> 3.10.4"
 
   spec.add_development_dependency "bundler", ">= 1.17", "< 3.0"
-  spec.add_development_dependency "faraday", "~> 0.13"
+  spec.add_development_dependency "faraday", "~> 1.7"
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "minitest-focus", "~> 1.1"
   spec.add_development_dependency "minitest-rg", "~> 5.2"
-  spec.add_development_dependency "rake", "~> 12.0"
+  spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "redcarpet", "~> 3.4"
-  spec.add_development_dependency "rubocop", "~> 0.63.1"
-  spec.add_development_dependency "toys", "~> 0.7"
+  spec.add_development_dependency "rubocop", "~> 1.20"
+  spec.add_development_dependency "toys", "~> 0.12"
   spec.add_development_dependency "yard", "~> 0.9"
   spec.add_development_dependency "yard-doctest", "~> 0.1.6"
 end
