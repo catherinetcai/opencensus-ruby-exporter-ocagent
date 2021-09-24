@@ -16,6 +16,7 @@
 
 require 'google/protobuf/well_known_types'
 require 'gruf'
+require 'opencensus/trace/exporters/ocagent/export_request_enumerator'
 require 'opencensus/trace/exporters/ocagent/converter'
 require 'opencensus/proto/agent/common/v1/common_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_pb'
@@ -59,10 +60,14 @@ module OpenCensus
         # @param [Array<OpenCensus::Trace::Span>] :spans The captured spans to forward to the trace server.
         #
         def export(spans)
-          response = client.call(:Export, generate_span_requests(spans)) # This is where the span requests go
-          response.message.each do |msg|
-            puts("Responses: #{response.message.inspect}")
+          return if spans.nil? || spans.empty?
+
+          client.call(:Export, generate_span_requests(spans).each_item) do |r|
+            puts "Received a response: #{r.inspect}"
           end
+          # response.message.each do |msg|
+          #   puts("Responses: #{response.message.inspect}")
+          # end
         rescue ::Gruf::Client::Error => e
           puts("Error: #{e.error.inspect}")
         end
@@ -70,7 +75,7 @@ module OpenCensus
         def generate_span_requests(spans)
           span_protos = spans.map { |span| Converter.new.convert_span(span) }
 
-          ::OpenCensus::Proto::Agent::Trace::V1::ExportTraceServiceRequest.new(node: node, spans: span_protos)
+          ::OpenCensus::Trace::Exporters::OCAgent::ExportRequestEnumerator.new([::OpenCensus::Proto::Agent::Trace::V1::ExportTraceServiceRequest.new(node: node, spans: span_protos)])
         end
 
         private

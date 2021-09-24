@@ -3,6 +3,7 @@ require 'gruf'
 require 'opencensus/proto/agent/common/v1/common_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_services_pb'
+require 'opencensus/trace/exporters/ocagent/export_request_enumerator'
 
 module OpenCensus
   module Trace
@@ -14,6 +15,11 @@ module OpenCensus
 
           def initialize
             @stack_trace_hash_ids = {}
+          end
+
+          def convert_spans(spans)
+            span_protos = spans.map { |span| Converter.new.convert_span(span) }
+            OCAgent::ExportRequestEnumerator.new(span_protos)
           end
 
           def convert_span(span_data)
