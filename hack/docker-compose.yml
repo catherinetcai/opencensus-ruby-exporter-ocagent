@@ -6,12 +6,15 @@ services:
     image: omnition/opencensus-agent:0.1.11
     command: ["--config=/conf/oc-agent-config.yml"]
     ports:
+      - "1888:1888"
+      - "14268"
       - 55678:55678
       - 55679:55679
     volumes:
       - ./oc-agent-config.yml:/conf/oc-agent-config.yml
     depends_on:
       - oc-collector
+
   oc-collector:
     image: omnition/opencensus-collector:0.1.11
     command: ["--config=/conf/oc-collector-config.yml"]
@@ -19,6 +22,11 @@ services:
       - ./oc-collector-config.yml:/conf/oc-collector-config.yml
     depends_on:
       - zipkin
+    ports:
+      - "55678"
+      - "55680:55679"
+      - "1777:1777"
+      - "8888:8888" # Prometheus metrics
   zipkin:
     image: openzipkin/zipkin
     ports:

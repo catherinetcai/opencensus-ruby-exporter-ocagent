@@ -1,6 +1,10 @@
 receivers:
-  opencensus: {}
+  opencensus:
+    port: 55678
 
 exporters:
   opencensus:
     endpoint: "oc-collector:55678"
+  zipkin:
+    service_name: 'ocagent-test'
+    endpoint: http://zipkin:9411/api/v2/spans

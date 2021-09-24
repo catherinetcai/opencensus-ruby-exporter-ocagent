@@ -2,9 +2,8 @@
 
 source "https://rubygems.org"
 
-git 'https://github.com/catherinetcai/opencensus-proto.git', branch: 'ruby-gemspec' do
+git 'https://github.com/catherinetcai/opencensus-proto.git' do
   gem 'opencensus-proto'
 end
 
-gem 'pry'
 gemspec

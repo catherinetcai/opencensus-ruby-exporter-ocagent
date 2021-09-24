@@ -2,15 +2,31 @@
 This library exports OpenCensus data to the OpenCensus Agent.
 
 ## This Fork
-This is based off of the [Python OC-Agent Exporter](https://github.com/census-instrumentation/opencensus-python/blob/master/contrib/opencensus-ext-ocagent/README.rst) and the [OpenCensus Ruby Exporter Stackdriver](https://github.com/census-ecosystem/opencensus-ruby-exporter-stackdriver).
+This is based off of the [Python OC-Agent Exporter](https://github.com/census-instrumentation/opencensus-python/blob/master/contrib/opencensus-ext-ocagent/README.rst) and the [OpenCensus Ruby Exporter Stackdriver](https://github.com/census-ecosystem/opencensus-ruby-exporter-stackdriver). It leverages [Gruf](https://github.com/bigcommerce/gruf) to handle the OpenCensus Agent service calls.
 
 This is devved on Ruby 3.0.
 
-## About the library
+## Usage
+In order to make it possible to pull in the generated OpenCensus Protos, I had to fork the OpenCensus-Proto repo and add a [Ruby Gemspec](https://github.com/catherinetcai/opencensus-proto/tree/master/gen-ruby).
 
-### Supported Ruby Versions
+```ruby
+# In Gemfile
 
-This library is supported on Ruby 2.3+.
+gem 'opencensus'
+git 'https://github.com/catherinetcai/opencensus-ruby-exporter-ocagent.git' do
+  gem 'opencensus-ocagent'
+end
+git 'https://github.com/catherinetcai/opencensus-proto.git' do
+  gem 'opencensus-proto'
+end
+
+# In an initializer - config/initializers/opencensus.rb
+OpenCensus.configure do |c|
+  c.trace.exporter = OpenCensus::Trace::Exporters::OCAgent.new(service_name: 'your-service-name')
+end
+```
+
+Now any requests should just be instrumented.
 
 ### Versioning
 
