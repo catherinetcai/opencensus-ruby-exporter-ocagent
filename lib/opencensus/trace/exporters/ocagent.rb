@@ -59,10 +59,12 @@ module OpenCensus
         # @param [Array<OpenCensus::Trace::Span>] :spans The captured spans to forward to the trace server.
         #
         def export(spans)
-          responses = client.call(:Export, generate_span_requests(spans)) # This is where the span requests go
-          puts("Responses: #{responses}")
+          response = client.call(:Export, generate_span_requests(spans)) # This is where the span requests go
+          response.message.each do |msg|
+            puts("Responses: #{response.message.inspect}")
+          end
         rescue ::Gruf::Client::Error => e
-          puts("Error: #{e}")
+          puts("Error: #{e.error.inspect}")
         end
 
         def generate_span_requests(spans)
