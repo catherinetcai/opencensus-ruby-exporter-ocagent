@@ -12,7 +12,7 @@ module OpenCensus
           TraceProtos = ::OpenCensus::Proto::Trace
           AgentProtos = ::OpenCensus::Proto::Agent
 
-          def initialize_clone
+          def initialize
             @stack_trace_hash_ids = {}
           end
 
@@ -20,14 +20,14 @@ module OpenCensus
             return if span_data.nil?
 
             TraceProtos::V1::Span.new(
-              name: span_data.name,
+                                                                                         name: truncatable_string(span_data.name.value, span_data.name.truncated_byte_count),
               kind: span_data.kind,
               trace_id: span_data.trace_id,
               span_id: span_data.span_id,
               parent_span_id: span_data.parent_span_id,
               start_time: pb_timestamp(span_data.start_time),
               end_time: pb_timestamp(span_data.end_time),
-              status: span_data.status,
+              status: convert_status(span_data.status),
               child_span_count: optional_uint32(span_data.child_span_count),
               attributes: convert_attributes(span_data.attributes, span_data.dropped_attributes_count),
               stack_trace: convert_stack_trace(span_data.stack_trace,
@@ -56,7 +56,7 @@ module OpenCensus
           end
 
           def pb_timestamp(time)
-            Google::Protobuf::Timestamp.new.from_time(time)
+            Google::Protobuf::Timestamp.new(seconds: time.to_i, nanos: time.nsec)
           end
 
           def pb_status(status)
@@ -69,8 +69,12 @@ module OpenCensus
           end
 
           def convert_attributes(attributes, dropped_attributes_count)
+            attribute_map = {}
+            attributes.each do |key, value|
+              attribute_map[key] = convert_attribute_value(value)
+            end
             TraceProtos::V1::Span::Attributes.new(
-              attribute_map: attributes,
+              attribute_map: attribute_map,
               dropped_attributes_count: dropped_attributes_count
             )
           end
@@ -78,7 +82,7 @@ module OpenCensus
           def convert_attribute_value(value)
             case value
             when OpenCensus::Trace::TruncatableString
-              TraceProtos::V1::AttributeValue.new(string_value: truncatable_string(value))
+              TraceProtos::V1::AttributeValue.new(string_value: TraceProtos::V1::TruncatableString.new(value: value.value, truncated_byte_count: value.truncated_byte_count))
             when TrueClass || FalseClass
               TraceProtos::V1::AttributeValue.new(bool_value: value)
             when Integer
@@ -88,8 +92,11 @@ module OpenCensus
           end
 
           def convert_stack_trace(stack_trace, dropped_frames_count, stack_trace_hash_id)
+            # TODO: For whatever reason, some of these are coming in negative, despite the field being unsigned
+            stack_trace_hash_id = 0 if stack_trace_hash_id.nil? || stack_trace_hash_id < 0
+
             # If the hash id already exists, then just return
-            if @stack_trace_hash_ids[stack_trace_hash_id]
+            if stack_trace_hash_id > 0 && @stack_trace_hash_ids[stack_trace_hash_id]
               return TraceProtos::V1::StackTrace.new(stack_trace_hash_id: stack_trace_hash_id)
             end
 
@@ -125,10 +132,21 @@ module OpenCensus
               end
             end.compact
 
-            TraceProtos::Span::TimeEvents.new(
+            TraceProtos::V1::Span::TimeEvents.new(
               time_event: event_protos,
               dropped_annotations_count: dropped_annotations_count,
               dropped_message_events_count: dropped_message_events_count
+            )
+          end
+
+          def convert_links(links, dropped_links_count)
+            converted_links = links.map do |link|
+              convert_link(links)
+            end
+
+            TraceProtos::V1::Span::Links.new(
+              link: converted_links,
+              dropped_links_count: dropped_links_count,
             )
           end
 
@@ -150,6 +168,12 @@ module OpenCensus
             TraceProtos::V1::Span::TimeEvent::Annotation.new
           end
 
+          def convert_status(status)
+            return if status.nil?
+
+            TraceProtos::V1::Status.new(code: status.code, message: status.message)
+          end
+
           def add_pb_attributes(pb_attributes, key, value)
             case value.class
             when TrueClass || FalseClass
@@ -163,10 +187,6 @@ module OpenCensus
             else
               pb_attributes.attribute_map[key].string_value = value
             end
-          end
-
-          def hex_to_bytes(hex)
-            hex.pack("H*").unpack("C*")
           end
         end
       end

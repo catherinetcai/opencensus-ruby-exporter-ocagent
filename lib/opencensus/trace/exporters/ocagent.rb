@@ -80,7 +80,7 @@ module OpenCensus
             identifier: OpenCensus::Proto::Agent::Common::V1::ProcessIdentifier.new(
               host_name: host_name || Socket.gethostname,
               pid: Process.pid,
-              start_timestamp: Google::Protobuf::Timestamp.new(seconds: time.to_i, nanos: time.nsec),
+              start_timestamp: Converter.new.pb_timestamp(time),
             ),
             library_info: OpenCensus::Proto::Agent::Common::V1::LibraryInfo.new(
               language: OpenCensus::Proto::Agent::Common::V1::LibraryInfo::Language::RUBY,
