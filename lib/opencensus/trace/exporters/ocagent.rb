@@ -93,7 +93,7 @@ module OpenCensus
         end
 
         def initialize_pool(max_threads, max_queue)
-          Concurrent::ThreadpoolExecutor.new(
+          Concurrent::ThreadPoolExecutor.new(
             min_threads: 1,
             max_threads: max_threads,
             max_queue: max_queue,
