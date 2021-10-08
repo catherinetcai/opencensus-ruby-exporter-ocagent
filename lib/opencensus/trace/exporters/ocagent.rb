@@ -35,22 +35,20 @@ module OpenCensus
 
       ## OpenCensus Agent exporter for Trace
       class OCAgent
-        attr_reader :client, :endpoint, :node, :service_name
+        attr_reader :client_promise, :endpoint, :node, :service_name
 
         ## Create an OpenCensusTrace exporter
         #
         # @param [String] :service_name The name of the service to report in traces.
         # @param [optional String] :host_name The host_name of the node.
         # @param [optional String] :endpoint The endpoint to forward the OpenCensus traces.
-        # @param [optional Gruf::Client] :client The gRPC client used to export OC traces.
+        # @param [optional Gruf::Client] :client_promise The gRPC client used to export OC traces.
         # @param [optional Integer] :max_queue The max number of API requests that can be queued.
         # @param [optional Integer] :max_threads the max number of threads to process requests.
-        def initialize(service_name:, host_name: nil, endpoint: nil, client: nil, max_queue: 1000, max_threads: 1)
+        def initialize(service_name:, host_name: nil, endpoint: nil, client_promise: nil, max_queue: 1000, max_threads: 1)
           @endpoint = endpoint || DEFAULT_ENDPOINT
-          @client = client || ::Gruf::Client.new(
-            service: ::OpenCensus::Proto::Agent::Trace::V1::TraceService,
-            options: { hostname: @endpoint },
-          )
+          @pool = initialize_pool(max_queue, max_threads)
+          @client_promise = client_promise || create_client_promise(@pool, ::OpenCensus::Proto::Agent::Trace::V1::TraceService, @endpoint)
           @service_name = service_name
           @node = get_node(service_name: @service_name, host_name: host_name)
         end
@@ -62,12 +60,16 @@ module OpenCensus
         def export(spans)
           return if spans.nil? || spans.empty?
 
-          client.call(:Export, generate_span_requests(spans).each_item) do |r|
-            puts "Received a response: #{r.inspect}"
+          client_promise.execute
+          export_promise = client_promise.then do |client|
+            client.call(:Export, generate_span_requests(spans).each_item) do |r|
+              puts "Received a response: #{r.inspect}"
+            end
           end
-          # response.message.each do |msg|
-          #   puts("Responses: #{response.message.inspect}")
-          # end
+
+          export_promise.on_error do |reason|
+            puts "Error sending trace because: #{e}"
+          end
         rescue ::Gruf::Client::Error => e
           puts("Error: #{e.error.inspect}")
         end
@@ -79,6 +81,25 @@ module OpenCensus
         end
 
         private
+
+        def create_client_promise(pool, service, options)
+          Concurrent::Promise.new(executor: pool) do
+            ::Gruf::Client.new(
+              service: service,
+              options: options,
+            )
+          end
+        end
+
+        def initialize_pool(max_threads, max_queue)
+          Concurrent::ThreadpoolExecutor.new(
+            min_threads: 1,
+            max_threads: max_threads,
+            max_queue: max_queue,
+            fallback_policy: :caller_runs,
+            auto_terminate: false,
+          )
+        end
 
         def get_node(service_name:, host_name: nil)
           time = Time.current
