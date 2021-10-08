@@ -21,6 +21,7 @@ require 'opencensus/trace/exporters/ocagent/converter'
 require 'opencensus/proto/agent/common/v1/common_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_pb'
 require 'opencensus/proto/agent/trace/v1/trace_service_services_pb'
+require 'concurrent'
 
 module OpenCensus
   ## OpenCensus Trace collects distributed traces
